@@ -72,6 +72,9 @@ public class StaticFilesConfiguration {
             }
 
         } catch (DirectoryTraversal.DirectoryTraversalDetection directoryTraversalDetection) {
+            httpResponse.setStatus(400);
+            httpResponse.getWriter().write("Bad request");
+            httpResponse.getWriter().flush();
             LOG.warn(directoryTraversalDetection.getMessage() + " directory traversal detection for path: "
                              + httpRequest.getPathInfo());
         }
@@ -120,6 +123,14 @@ public class StaticFilesConfiguration {
         staticResourcesSet = false;
         externalStaticResourcesSet = false;
     }
+    
+    public boolean isStaticResourcesSet() {
+        return staticResourcesSet;
+    }
+    
+    public boolean isExternalStaticResourcesSet() {
+        return externalStaticResourcesSet;
+    }
 
     /**
      * Configures location for static resources
@@ -137,10 +148,8 @@ public class StaticFilesConfiguration {
 
             staticResourceHandlers.add(new ClassPathResourceHandler(folder, "index.html"));
             LOG.info("StaticResourceHandler configured with folder = " + folder);
-            StaticFilesFolder.localConfiguredTo(folder);
             staticResourcesSet = true;
         }
-
     }
 
     /**
@@ -168,10 +177,8 @@ public class StaticFilesConfiguration {
                 LOG.error("Error when creating external StaticResourceHandler", e);
             }
 
-            StaticFilesFolder.externalConfiguredTo(folder);
             externalStaticResourcesSet = true;
         }
-
     }
 
     public static StaticFilesConfiguration create() {

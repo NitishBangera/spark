@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import spark.embeddedserver.jetty.websocket.WebSocketTestClient;
 import spark.embeddedserver.jetty.websocket.WebSocketTestHandler;
 import spark.examples.exception.BaseException;
+import spark.examples.exception.JWGmeligMeylingException;
 import spark.examples.exception.NotFoundException;
 import spark.examples.exception.SubclassOfBaseException;
 import spark.util.SparkTestUtil;
@@ -108,12 +109,7 @@ public class GenericIntegrationTest {
         get("/paramandwild/:param/stuff/*", (q, a) -> "paramandwild: " + q.params(":param") + q.splat()[0]);
         get("/paramwithmaj/:paramWithMaj", (q, a) -> "echo: " + q.params(":paramWithMaj"));
 
-        get("/templateView", (q, a) -> {
-            return new ModelAndView(new HashMap<String, Object>() {
-                {
-                    put("hello", "Hello");
-                }}, "my view");
-        }, new TemplateEngine() {
+        get("/templateView", (q, a) ->  new ModelAndView("Hello", "my view"), new TemplateEngine() {
             @Override
             public String render(ModelAndView modelAndView) {
                 return modelAndView.getModel() + " from " + modelAndView.getViewName();
@@ -174,6 +170,14 @@ public class GenericIntegrationTest {
             throw new NotFoundException();
         });
 
+        get("/throwmeyling", (q, a) -> {
+            throw new JWGmeligMeylingException();
+        });
+
+        exception(JWGmeligMeylingException.class, (meylingException, q, a) -> {
+            a.body(meylingException.trustButVerify());
+        });
+
         exception(UnsupportedOperationException.class, (exception, q, a) -> {
             a.body("Exception handled");
         });
@@ -226,7 +230,7 @@ public class GenericIntegrationTest {
     public void template_view_should_be_rendered_with_given_model_view_object() throws Exception {
         UrlResponse response = testUtil.doMethod("GET", "/templateView", null);
         Assert.assertEquals(200, response.status);
-        Assert.assertEquals("{hello=Hello} from my view", response.body);
+        Assert.assertEquals("Hello from my view", response.body);
     }
 
     @Test
@@ -330,6 +334,14 @@ public class GenericIntegrationTest {
         UrlResponse response = testUtil.doMethod("GET", "/param/" + encoded, null);
         Assert.assertEquals(200, response.status);
         Assert.assertEquals("echo: " + polyglot, response.body);
+    }
+
+    @Test
+    public void testPathParamsWithPlusSign() throws Exception {
+        String pathParamWithPlusSign = "not+broken+path+param";
+        UrlResponse response = testUtil.doMethod("GET", "/param/" + pathParamWithPlusSign, null);
+        Assert.assertEquals(200, response.status);
+        Assert.assertEquals("echo: " + pathParamWithPlusSign, response.body);
     }
 
     @Test
@@ -469,6 +481,12 @@ public class GenericIntegrationTest {
         UrlResponse response = testUtil.doMethod("GET", "/thrownotfound", null);
         Assert.assertEquals(NOT_FOUND_BRO, response.body);
         Assert.assertEquals(404, response.status);
+    }
+
+    @Test
+    public void testTypedExceptionMapper() throws Exception {
+        UrlResponse response = testUtil.doMethod("GET", "/throwmeyling", null);
+        Assert.assertEquals(new JWGmeligMeylingException().trustButVerify(), response.body);
     }
 
     @Test
